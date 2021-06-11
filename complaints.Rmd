@@ -1,7 +1,7 @@
 ---
 title: "Police Complaints"
-author: "David Kane"
-date: "6/6/2021"
+author: "Fahim Ahmed"
+date: "6/10/2021"
 output: html_document
 ---
 
@@ -20,12 +20,12 @@ raw_data <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-m
 ```
 
 
-```{r, clean_data}
+```{r, clean_data, include = FALSE}
 
 # This code makes a table that lets us know how many times each officer id appeared 
 # in the tibble, i.e. how many complaints each officer has.
 
-clean_data <- raw_data %>% 
+data_philadelphia <- raw_data %>% 
   group_by(officer_id) %>% 
   summarise(total = n()) %>% 
   
@@ -48,16 +48,17 @@ clean_data <- raw_data %>%
 # calculate. Then, we only keep around the variables we need for the plot.
   
   mutate(compl_perc = compl_total / sum(compl_total)) %>% 
-  select(compl_dec, compl_perc)
+  select(compl_dec, compl_perc) %>%
+  mutate(city = "Philidelphia")
 ```
 
-```{r, plot_data}
+```{r, plot_data, include = FALSE}
 # We could just have one giant pipe which goes directly into ggplot(), like we
 # do in the tutorials. There is nothing wrong with that approach, but it is
 # often easier to split your work up into separate parts, the better to make
 # sure that each part is doing what you want.
 
-clean_data %>% 
+data_philadelphia %>% 
   ggplot(aes(x = compl_dec, y = compl_perc)) +
     geom_col() +
     labs(title = "Distribution of Police Complaints in Philadelphia",
@@ -67,5 +68,54 @@ clean_data %>%
          caption = "Data from Financial Times") +
     scale_x_continuous(breaks = 1:10) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) 
+```
+
+```{r, include = FALSE}
+raw_data_nyc <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-misconduct-complaints-analysis/main/output/nyc_clean.csv")
+
+raw_data_chicago <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-misconduct-complaints-analysis/main/output/chicago_clean.csv")
+
+```
+```{r, include = FALSE}
+data_nyc <- raw_data_nyc %>%
+  group_by(OfficerID) %>%
+  summarize(total = n()) %>%
+  mutate(compl_dec = ntile(total, 10)) %>%
+  group_by(compl_dec) %>%
+  summarize(compl_total = sum(total)) %>%
+  mutate(compl_perc = compl_total / sum(compl_total)) %>%
+  select(compl_dec, compl_perc) %>%
+  mutate(city = "New York City")
+
+data_chicago <- raw_data_chicago %>%
+  group_by(UID) %>%
+  summarize(total = n()) %>%
+  mutate(compl_dec = ntile(total, 10)) %>%
+  group_by(compl_dec) %>%
+  summarize(compl_total = sum(total)) %>%
+  mutate(compl_perc = compl_total / sum(compl_total)) %>%
+  select(compl_dec, compl_perc) %>%
+  mutate(city = "Chicago")
+
+#combine the three datasets into one
+clean_data <- bind_rows(data_nyc, data_chicago, data_philadelphia)
+  
+```
+
+```{r, echo = FALSE}
+clean_data %>%
+  ggplot(mapping = aes(compl_dec, compl_perc)) +
+    geom_col(fill = if_else(clean_data$compl_dec == 10, "lightblue", "dodgerblue4")) +
+    facet_wrap(~ city) +
+    scale_x_continuous(breaks = c(1:10)) +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_classic() +
+    labs(title = "In several US cities, a small group of officers generate a disproportionate\nshare of misconduct in complaints",
+       subtitle = "Distribution of civilian misconduct complaints, by decile",
+       x = "Officers are ranked by number of complaints and grouped into deciles",
+       y = "",
+       caption = "Source: Financial Times")
+  
+
 ```
 
