@@ -3,5 +3,5 @@
 .RData
 .Ruserdata
 
-police.Rproj
-
+*.Rproj
+rsconnect
